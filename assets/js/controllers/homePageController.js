@@ -1,6 +1,6 @@
 //var Vue = require('vue');
 
-new Vue({
+var vm = new Vue({
 // We want to target the div with an id of 'events'
   el: '#events',
 
@@ -20,52 +20,97 @@ new Vue({
   methods: {
   	// We dedicate a method to retrieving and setting some data
 	  fetchEvents: function() {
-	  	
-	        this.$http.get('event').success(function (data){
-					this.$set('events', data);
-					//console.log(events);
-				})
-				.error(function (data, status, request){
-					if (status === '404') {
-						return;
-					}
-					console.log("An unexpected error occurred: " + status);
-				})
-				
+
+			var evts = [];
+
+			io.socket.get('/event', function whenServerResponds(resp, JWR) {
+        
+        console.log('Fetched videos and subscribed... Response:', resp);
+        
+        //console.log(resp.length);
+        
+        for(var i=0;i<resp.length;i++){
+				     evts.push(resp[i]);
+				}
+        //this.$set('events', evts);
+        if (JWR.statusCode >= 400) {
+   
+          console.log('something bad happened',resp);
+    
+          return;
+        }
+      });
+
 	    // $set is a convenience method provided by Vue that is similar to pushing
 	    // data onto an array
-	    //this.$set('events', events);
-    },
+	    console.log("evts: " + evts);
+	    this.$set('events', evts);
+    
+	    io.socket.on('event', function whenAVideoIsCreatedUpdatedOrDestroyed(msg) {
+        console.log('Is it firing',msg);
+        if (msg.verb == "created") {
+		      vm.events.unshift({
+			          name: msg.data.name,
+			          description: msg.data.description,
+			          date: msg.data.date
+	      	 });
+	    	}
+	    	if (msg.verb == "destroyed"){
+	        vm.events.unshift({
+			          name: msg.previous.name,
+			          description: msg.previous.description,
+			          date: msg.previous.date
+      	 	});
+	    	}
+      });
+     },
 
     // Adds an event to the existing events array
 	  addEvent: function() {
 	    if(this.event.name) {
-	      //this.events.push(this.event);
-	      //this.event = { name: '', description: '', date: '' };
-	      this.$http.post('event', this.event).success(function(response) {
-	      	//console.log(response.id);
-	      	this.event.id = response.id;
-				  this.events.push(this.event);
-				  console.log("Event added!");
-				}).error(function(error) {
-				  console.log(error);
-				});
+	     	var evt = this.event;
+				//console.log(evt);
 
+				io.socket.post('/event',
+					{name: evt.name,
+					 description: evt.description,
+					 date: evt.date },
+					 function whenServerResponds(resp, JWR) {
+					//console.log(JWR.statusCode);
+					//console.log(JWR);
+					if (JWR.statusCode != 201) {
+   
+	          console.log('something bad happened',resp);
+	    
+	          return;
+        	}
+					evt.id = resp.id;
+				});
+				this.events.push(this.event);
+				this.event = { name: '', description: '', date: '' }
+				
 	    }
+
+	    
+
 	  },
 
 	  deleteEvent: function(index) {
-	  	//console.log(index);
-	 		//console.log(this.events[index].id);
+	  
 		  if(confirm("Are you sure you want to delete this event?")) {
-		    // $remove is a Vue convenience method similar to splice
-		    //this.events.$remove(index);
-		    this.$http.delete('event/' + this.events[index].id).success(function(response) {
-				  this.events.$remove(index);
-				}).error(function(error) {
-				  console.log(error);
-				});
 
+				var id_delete = this.events[index].id;
+				io.socket.delete('/event/' + id_delete, function (response, JWR) {
+					//console.log(JWR.statusCode);
+					if (JWR.statusCode != 200) {
+   
+	          console.log('something bad happened',resp);
+	    
+	          return;
+        	}
+				  console.log("event " + id_delete + " deleted");
+				});
+				this.events.$remove(index);	
 		  }
 		}
   }
