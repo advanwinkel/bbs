@@ -1,4 +1,5 @@
 //var Vue = require('vue');
+Vue.config.debug = true;
 
 var vm = new Vue({
 // We want to target the div with an id of 'events'
@@ -90,7 +91,8 @@ var vm = new Vue({
 	    
 	          return;
         	}
-        	vm.events.$remove(index);
+        	//vm.events.$remove(index);
+        	vm.events.splice(index,1);
 				  console.log("event " + id_delete + " deleted");
 				});
 		  }
