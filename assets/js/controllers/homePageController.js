@@ -1,6 +1,16 @@
-//var Vue = require('vue');
-Vue.config.debug = true;
+/*!
+ * Home page controller for vue bbs demo app
+ * (c) 2015 Ad van Winkel
+ *
+ * Vue demo app originally by Ryan Chenkie modified using Sails.js  
+ * as a backend framework for persistency
+ * and reactive client-client interaction using websockets
+ */
 
+//Vue.config.debug = true;
+
+// Saving Vue instance in vm variable is necessary for accessing the instance 
+// from within io.socket callback function
 var vm = new Vue({
 // We want to target the div with an id of 'events'
   el: '#events',
@@ -36,10 +46,11 @@ var vm = new Vue({
 	    	// data onto an array
         vm.$set('events', resp);
       });
-    
+    	//register event handler that runs when event is created, updated or destroyed
 	    io.socket.on('event', function whenAnEventIsCreatedUpdatedOrDestroyed(msg) {
-        console.log('Is it firing',msg);
+        //console.log('Is it firing',msg);
         if (msg.verb == "created") {
+        	//add new event to events array
 		      vm.events.push({
 			          name: msg.data.name,
 			          description: msg.data.description,
@@ -48,10 +59,10 @@ var vm = new Vue({
 	      	 });
 	    	}
 	    	if (msg.verb == "destroyed"){
-	        var arr = vm.events.filter(function dontdelete(obj){
+	    		//apply filter to events array to remove destroyed event
+	        vm.events = vm.events.filter(function dontDelete(obj){
 	        	return obj.id != msg.id 
 	       	});
-	       	vm.events = arr;
 	    	}
       });
      },
@@ -91,7 +102,6 @@ var vm = new Vue({
 	    
 	          return;
         	}
-        	//vm.events.$remove(index);
         	vm.events.splice(index,1);
 				  console.log("event " + id_delete + " deleted");
 				});
